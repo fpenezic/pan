@@ -1,0 +1,12 @@
+FROM python:3.8-alpine
+RUN apk add --update-cache nmap nmap-scripts
+RUN addgroup -S -g 1001 scanner \
+    && adduser -S -u 1001 -g scanner scanner
+RUN mkdir /app
+ADD ./app /app
+RUN chown -R scanner:scanner /app
+WORKDIR /app
+USER scanner
+RUN pip install -r requirements.txt
+
+CMD ["python", "scanner"]

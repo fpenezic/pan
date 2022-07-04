@@ -1,0 +1,4 @@
+.vagrant
+Vagrantfile
+exercise2/scanner/app/data/
+inventory.yml

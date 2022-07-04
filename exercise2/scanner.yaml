@@ -1,0 +1,36 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: scanner
+spec:
+  jobTemplate:
+    metadata:
+      name: scanner
+    spec:
+      template:
+        metadata:
+        spec:
+          volumes:
+          - name: scandata
+            hostPath:
+              path: /tmp/scanner
+              type: DirectoryOrCreate
+          initContainers:
+          - name: chown
+            image: busybox
+            command: ["sh", "-c", "chown -R 1001:1001 /scandata"]
+            volumeMounts:
+            - name: scandata
+              mountPath: /scandata
+          containers:
+          - image: fpenezic/scanner:dev
+            name: scanner
+            command: ["python", "scanner"]
+            args:
+            - "10.0.27.0/28"
+            volumeMounts:
+            - mountPath: /app/data
+              name: scandata
+          restartPolicy: OnFailure
+  schedule: '*/5 * * * *'
+  concurrencyPolicy: Forbid

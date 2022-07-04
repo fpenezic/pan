@@ -1,0 +1,92 @@
+#!/usr/local/bin/python
+
+import nmap
+import sys
+import ipaddress
+import json
+from pathlib import Path
+
+nm = nmap.PortScanner()
+results_file = 'data/scan_results.json'
+
+# check if previous scan results exist
+def file_exists():
+    if Path(results_file).is_file():
+        return True
+    else:
+        return False
+
+# check if results file is valid json
+def is_json():
+    if file_exists():
+        with open(results_file) as f:
+            try:
+                json.load(f)
+                return True
+            except ValueError:
+                return False
+
+# check if ip address is valid
+try:
+    ip = sys.argv[1]
+except IndexError:
+    print('IP or CIDR not specified')
+    sys.exit(1)
+
+try:
+    ipaddress.ip_address(ip)
+except ValueError:
+    try: # CIDR
+        ipaddress.ip_network(ip)
+    except ValueError:
+        print('Invalid IP address or CIDR')
+        sys.exit(1)
+
+hosts = {}
+
+# run nmap scan
+nm.scan(ip, '0-65535')
+for host in nm.all_hosts():
+    for proto in nm[host].all_protocols():
+        lport = nm[host][proto].keys()
+        ports = []
+        for port in lport:
+            if nm[host][proto][port]['state'] == 'open':
+                ports.append(port)
+    hosts.update({host: ports})
+
+# if file exists and is valid json, compare results from previous scan and return new open ports and hosts else treat as new scan
+if file_exists() and is_json():
+    # compare results from previous scan and return new open ports and hosts else treat as new scan
+    with open(results_file) as f:
+        old_results = json.load(f)
+        new_results = hosts
+        new_hosts = []
+        new_ports = []
+        for host in new_results:
+            if host in old_results:
+                print(host)
+                for port in new_results[host]:
+                    if port not in old_results[host]:
+                        print('* {}/tcp open'.format(port))
+                        new_ports.append(port)
+                        new_hosts.append(host)
+            else:
+                print(host)
+                for port in hosts[host]:
+                    print('* {}/tcp open'.format(port))
+                new_hosts.append(host)
+                new_ports.append(new_results[host])
+        if new_hosts:
+            with open(results_file, 'w') as f:
+                json.dump(hosts, f)
+# else treat as new scan and return all ports for each host
+else:
+    with open(results_file, 'w') as f:
+        json.dump(hosts, f)
+    for host in hosts:
+        print(host)
+        for port in hosts[host]:
+            print('* {}/tcp open'.format(port))
+    print('Scan complete')
+    sys.exit(0)

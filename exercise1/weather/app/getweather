@@ -1,0 +1,23 @@
+#!/usr/bin/python3
+import os
+import sys
+from pyowm.owm import OWM
+
+
+if "OWM_API_KEY" in os.environ:
+    owm = OWM(os.environ["OWM_API_KEY"])
+else:
+    print("OWM_API_KEY not set")
+    sys.exit(1)
+
+mgr = owm.weather_manager()
+
+if "OWM_CITY" in os.environ:
+    city = os.environ["OWM_CITY"]
+else:
+    print("OWM_CITY not set")
+    sys.exit(1)
+
+weather = mgr.weather_at_place(city).weather
+msg = 'city="{}", description="{}", temp={}, humidity={}'.format(city, weather.detailed_status, weather.temperature('fahrenheit').get('temp'), weather.humidity)
+print(msg)
